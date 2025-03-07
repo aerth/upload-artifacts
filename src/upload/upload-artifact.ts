@@ -30,64 +30,48 @@ export async function run(): Promise<void> {
   )
   if (searchResult.filesToUpload.length === 0) {
     // No files were found, different use cases warrant different types of behavior if nothing is found
-    switch (inputs.ifNoFilesFound) {
-      case NoFileOptions.warn: {
-        core.warning(
-          `No files were found with the provided path: ${inputs.searchPath}. No artifacts will be uploaded.`
-        )
-        break
-      }
-      case NoFileOptions.error: {
-        core.setFailed(
-          `No files were found with the provided path: ${inputs.searchPath}. No artifacts will be uploaded.`
-        )
-        break
-      }
-      case NoFileOptions.ignore: {
-        core.info(
-          `No files were found with the provided path: ${inputs.searchPath}. No artifacts will be uploaded.`
-        )
-        break
-      }
-    }
-  } else {
-    const s = searchResult.filesToUpload.length === 1 ? '' : 's'
-    core.info(
-      `With the provided path, there will be ${searchResult.filesToUpload.length} file${s} uploaded`
+    let warnfn = (inputs.ifNoFilesFound == NoFileOptions.warn) ? core.warning : (inputs.ifNoFilesFound == NoFileOptions.error) ? core.setFailed : core.info
+    warnfn(`No files were found with the provided path: ${inputs.searchPath}. No artifacts will be uploaded.`)
+    return
+  } 
+  const s = searchResult.filesToUpload.length === 1 ? '' : 's'
+  core.info(
+    `With the provided path, there will be ${searchResult.filesToUpload.length} file${s} uploaded`
+  )
+  core.debug(`Root artifact directory is ${searchResult.rootDirectory}`)
+
+  if (inputs.overwrite) {
+    await deleteArtifactIfExists(inputs.artifactName)
+  }
+
+  const options: UploadArtifactOptions = {}
+  if (inputs.retentionDays) {
+    options.retentionDays = inputs.retentionDays
+  }
+
+  if (typeof inputs.compressionLevel !== 'undefined') {
+    options.compressionLevel = inputs.compressionLevel
+  }
+  if (searchResult.filesToUpload.length === 1) {
+    core.info("uploading one file")
+    await uploadArtifact(
+      inputs.artifactName,
+      searchResult.filesToUpload,
+      searchResult.rootDirectory,
+      options
     )
-    core.debug(`Root artifact directory is ${searchResult.rootDirectory}`)
-
-    if (inputs.overwrite) {
-      await deleteArtifactIfExists(inputs.artifactName)
-    }
-
-    const options: UploadArtifactOptions = {}
-    if (inputs.retentionDays) {
-      options.retentionDays = inputs.retentionDays
-    }
-
-    if (typeof inputs.compressionLevel !== 'undefined') {
-      options.compressionLevel = inputs.compressionLevel
-    }
-
-    if (searchResult.filesToUpload.length === 1) {
-      await uploadArtifact(
-        inputs.artifactName,
-        searchResult.filesToUpload,
+  } else {
+    core.info("uploading " + searchResult.filesToUpload.length + " files")
+    const promises = searchResult.filesToUpload.map(file =>
+      uploadArtifact(
+        `${file.replace(searchResult.rootDirectory, '')}`,
+        [file],
         searchResult.rootDirectory,
         options
       )
-    } else {
-      core.info("uploading multiples files")
-      const promises = searchResult.filesToUpload.map(file =>
-        uploadArtifact(
-          `${file.replace(searchResult.rootDirectory, '')}`,
-          [file],
-          searchResult.rootDirectory,
-          options
-        )
-      )
-      await Promise.all(promises)
-    }
+    )
+    await Promise.all(promises)
   }
+  core.info(`cool`)
+  
 }
