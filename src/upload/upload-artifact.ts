@@ -70,11 +70,24 @@ export async function run(): Promise<void> {
       options.compressionLevel = inputs.compressionLevel
     }
 
-    await uploadArtifact(
-      inputs.artifactName,
-      searchResult.filesToUpload,
-      searchResult.rootDirectory,
-      options
-    )
+    if (searchResult.filesToUpload.length === 1) {
+      await uploadArtifact(
+        inputs.artifactName,
+        searchResult.filesToUpload,
+        searchResult.rootDirectory,
+        options
+      )
+    } else {
+      core.info("uploading multiples files")
+      const promises = searchResult.filesToUpload.map(file =>
+        uploadArtifact(
+          `${file.replace(searchResult.rootDirectory, '')}`,
+          [file],
+          searchResult.rootDirectory,
+          options
+        )
+      )
+      await Promise.all(promises)
+    }
   }
 }
