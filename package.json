@@ -1,6 +1,6 @@
 {
   "name": "upload-artifact",
-  "version": "4.6.3-aerth",
+  "version": "4.6.4-aerth",
   "description": "Upload an Actions Artifact in a workflow run",
   "main": "dist/upload/index.js",
   "scripts": {

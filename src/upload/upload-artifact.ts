@@ -64,7 +64,7 @@ export async function run(): Promise<void> {
     core.info("uploading " + searchResult.filesToUpload.length + " files")
     const promises = searchResult.filesToUpload.map(file =>
       uploadArtifact(
-        `${file.replace(searchResult.rootDirectory, '')}`,
+        `${file.replace(searchResult.rootDirectory, '').replace(/^\//, '')}`,
         [file],
         searchResult.rootDirectory,
         options
